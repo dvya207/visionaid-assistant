@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionAid | AI Visual Assistant</title>
+    <!-- Modern Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at top left, #0f172a 0%, #1e293b 40%, #020617 100%);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-highlight: rgba(255, 255, 255, 0.05);
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.5);
+            --accent-gradient: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+            --secondary: #64748b;
+            --accent: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+            --radius-lg: 28px;
+            --radius-md: 18px;
+            --radius-sm: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Prevent scrolling */
+        }
+
+        /* ===== BACKGROUND ACCENTS ===== */
+        .glow {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: var(--primary);
+            filter: blur(150px);
+            opacity: 0.15;
+            border-radius: 50%;
+            z-index: -1;
+            animation: float 10s infinite ease-in-out;
+        }
+
+        .glow-1 {
+            top: -100px;
+            left: -100px;
+        }
+
+        .glow-2 {
+            bottom: -100px;
+            right: -100px;
+            animation-delay: 5s;
+            background: var(--accent);
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(30px, 30px);
+            }
+        }
+
+        /* ===== NAVBAR ===== */
+        .navbar {
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        /* ===== MAIN GRID ===== */
+        .container {
+            flex: 1;
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 1rem 1.5rem;
+            display: grid;
+            grid-template-columns: 2fr 1.2fr;
+            /* Better balance - more space for results */
+            grid-template-rows: 1fr;
+            gap: 1.5rem;
+            overflow: hidden;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== CARD STYLES ===== */
+        .card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--glass-highlight), transparent);
+        }
+
+        /* ===== CAMERA SECTION ===== */
+        .camera-container {
+            position: relative;
+            width: 100%;
+            /* Full width - no side spacing */
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* IMPORTANT: do NOT mirror the video, so what you see matches what is captured */
+        }
+
+        .camera-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .live-badge {
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== CONTROLS SECTION ===== */
+        .controls-grid {
+            /* Position relative for absolute positioning of buttons */
+            position: relative;
+            height: 0;
+            /* Don't take up flow space under camera */
+            margin: 0;
+        }
+
+        .btn-floating {
+            position: absolute;
+            bottom: 2rem;
+            z-index: 50;
+            border: none;
+            outline: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s;
+            padding: 12px 24px;
+        }
+
+        .btn-floating:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Specific Button Positioning - mimicking the screenshot */
+        #btn-start {
+            left: 20px;
+            background: #3b82f6;
+            /* Blue Start Button */
+            width: 120px;
+        }
+
+        #btn-capture {
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 2rem;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: 140px;
+        }
+
+        #btn-voice {
+            right: 20px;
+            /* Right circular mic button */
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            padding: 0;
+            background: #3b82f6;
+        }
+
+        /* Results Panel Buttons - Right Column */
+        .results-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+            /* Push to bottom */
+            padding-top: 20px;
+        }
+
+        .btn-action {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+
+        .btn i {
+            font-size: 1.25rem;
+            /* Smaller icons */
+            margin-bottom: 2px;
+        }
+
+        .btn i {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #2563eb);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-accent {
+            background: linear-gradient(135deg, var(--accent), #d97706);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+        }
+
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .voice-toggle {
+            grid-column: span 2;
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+        }
+
+        .voice-toggle.active {
+            background: var(--success);
+            color: white;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+        }
+
+        /* ===== RESULTS SECTION ===== */
+        .results-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .results-header {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .results-content {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--text-main);
+            overflow-y: auto;
+            max-height: 500px;
+            min-height: 200px;
+        }
+
+        .result-item {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .result-timestamp {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading-bar {
+            height: 4px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .loading-bar.active {
+            display: block;
+        }
+
+        .loading-progress {
+            height: 100%;
+            background: var(--primary);
+            width: 50%;
+            animation: loading 1.5s infinite ease-in-out;
+        }
+
+        @keyframes loading {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(200%);
+            }
+        }
+
+        /* ===== MODAL ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 400px;
+            border: 1px solid var(--glass-border);
+            text-align: center;
+        }
+
+        .input-group {
+            margin: 1.5rem 0;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Background Glows -->
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+
+    <!-- SPLASH SCREEN -->
+    <div id="splash-screen"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white;">
+        <div class="loader-spinner"
+            style="width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 2rem;">
+        </div>
+        <h1
+            style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(90deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            Initializing VisionAid</h1>
+        <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 3rem;">Please wait while we set up your
+            camera...</p>
+
+        <div id="touch-hint"
+            style="text-align: center; display: none; flex-direction: column; align-items: center; animation: fadeIn 1s ease-in;">
+            <i class="fa-solid fa-hand-pointer"
+                style="font-size: 4rem; color: var(--primary); margin-bottom: 2rem; animation: pulse 2s infinite;"></i>
+            <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem;">Touch Anywhere</h2>
+            <p style="color: var(--text-muted); font-size: 1.2rem; max-width: 400px; line-height: 1.6;">Touch or click
+                anywhere on the screen to show the interface</p>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* Smooth fade out */
+        .fade-out {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease-out;
+        }
+    </style>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="brand">
+            <i class="fa-solid fa-eye"></i> VisionAid
+        </div>
+        <div class="status-pill">
+            <div class="status-dot"></div>
+            System Active
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Left Column: Camera logic -->
+        <div class="left-col">
+            <div class="card">
+                <div class="camera-container" style="display: flex; justify-content: center;">
+                    <video id="video" autoplay playsinline muted></video>
+
+                    <!-- Camera Overlay Elements -->
+                    <!-- Voice Toggle (Mic) - Top Right -->
+                    <button class="btn-floating" id="btn-voice" onclick="toggleVoice()"
+                        style="position: absolute; top: 20px; right: 20px; bottom: auto; left: auto; width: 60px; height: 60px; border-radius: 50%; padding: 0; background: linear-gradient(135deg, #10b981, #059669); border: 2px solid rgba(255,255,255,0.3); box-shadow: 0 4px 20px rgba(0,0,0,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; z-index: 70;">
+                        <i class="fa-solid fa-microphone" style="font-size: 1.5rem; color: white;"></i>
+                    </button>
+
+                    <!-- Capture (Camera) - Bottom Left -->
+                    <button class="btn-floating" id="btn-capture" onclick="describeScene()"
+                        style="position: absolute; bottom: 20px; left: 20px; top: auto; right: auto; transform: none; width: 60px; height: 60px; border-radius: 50%; padding: 0; background: linear-gradient(135deg, #3b82f6, #2563eb); border: 2px solid rgba(255,255,255,0.3); box-shadow: 0 4px 20px rgba(0,0,0,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; z-index: 70;">
+                        <i class="fa-solid fa-camera" style="font-size: 1.5rem; color: white;"></i>
+                    </button>
+                </div>
+
+                <!-- Hidden old controls grid - kept for logic reference if needed, but visually removed -->
+                <div class="controls-grid" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Right Column: Results -->
+        <div class="right-col">
+            <div class="card results-panel" style="display: flex; flex-direction: column;">
+                <div class="results-header">
+                    <h3>Results</h3>
+                </div>
+
+                <div class="results-content" id="results" style="flex: 1; margin-bottom: 20px;">
+                    <!-- Introduction Text -->
+                    <div class="result-item" style="color: var(--text-muted); padding-top: 1rem;">
+                        <p>Here's what I can do for you:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.6;">
+                            <li>Say "describe" to get a description.</li>
+                            <li>Say "read" to read text.</li>
+                            <li>Say "stop" to stop voice commands.</li>
+                        </ul>
+                        <br>
+                        <p>Keyboard shortcuts:</p>
+                        <ul style="margin-left: 20px; line-height: 1.6;">
+                            <li><strong>D</strong>: Describe</li>
+                            <li><strong>R</strong>: Read text</li>
+                            <li><strong>V</strong>: Toggle voice</li>
+                            <li><strong>SPACE</strong>: Repeat result</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Bottom Actions Row -->
+                <div class="results-actions">
+
+                    <button class="btn-action" style="background: #3b82f6;" onclick="describeScene()">
+                        <i class="fa-solid fa-comment"></i> Describe
+                    </button>
+                    <button class="btn-action" style="background: transparent; border: 1px solid #555;"
+                        onclick="readText()">
+                        <i class="fa-solid fa-font"></i> Read
+                    </button>
+                    <button class="btn-action" style="background: transparent; border: 1px solid #555;"
+                        onclick="openFaceModal()">
+                        <i class="fa-solid fa-user-plus"></i> Face
+                    </button>
+                    <button class="btn-action"
+                        style="background: #3b82f6; width: 40px; border-radius: 50%; flex: 0 0 40px;"
+                        onclick="speakLastResult()">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+
+                <div class="loading-bar" id="loader">
+                    <div class="loading-progress"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Additional styles for single-page fit */
+        .left-col {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .left-col .card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding-bottom: 1rem;
+        }
+
+        .right-col {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+                /* Stack visually */
+                overflow-y: auto;
+                /* Allow scroll on small screens */
+            }
+
+            body {
+                height: auto;
+                min-height: 100vh;
+                overflow-y: auto;
+            }
+        }
+    </style>
+
+    <!-- Face Registration Modal -->
+    <div class="modal" id="faceModal">
+        <div class="modal-content">
+            <h3>Register Face</h3>
+            <div class="input-group">
+                <input type="text" id="faceName" placeholder="Enter person's name">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" style="flex: 1;" onclick="registerFace()">Save</button>
+                <button class="btn btn-glass" style="flex: 1;" onclick="closeFaceModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        // Global State
+        let isSpeaking = false;
+        let voiceActive = false;
+        let recognition = null;
+        let appStarted = false; // track when splash + auto-start logic has run
+        let isProcessingCommand = false; // prevent multiple simultaneous commands
+        const synth = ('speechSynthesis' in window) ? window.speechSynthesis : null;
+
+        // Initialize Camera
+        const video = document.getElementById('video');
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Camera error:", err);
+                addResult("⚠ Camera access denied. Please allow permissions.", true);
+            });
+
+        // Initialize Speech Recognition (cross-browser where supported)
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                const command = event.results[0][0].transcript.toLowerCase();
+                addResult(`🎤 Heard: "${command}"`);
+                // Stop recognition immediately to prevent multiple commands
+                recognition.stop();
+                handleCommand(command);
+            };
+
+            recognition.onend = () => {
+                // Only restart if voice is active AND not currently processing a command
+                if (voiceActive && !isProcessingCommand) {
+                    setTimeout(() => {
+                        if (voiceActive && !isProcessingCommand) {
+                            try {
+                                recognition.start();
+                            } catch (e) {
+                                // Ignore errors if already started
+                            }
+                        }
+                    }, 500); // Small delay before restarting
+                }
+            };
+        } else {
+            // Voice recognition not available – clearly tell the (blind) user.
+            addResult("Voice commands are not supported in this browser. Please use Chrome or the latest Edge for voice control.", true);
+            speak("Voice commands are not supported in this browser. Please use Chrome or the latest Edge.");
+        }
+
+        function toggleVoice() {
+            voiceActive = !voiceActive;
+            // Match the actual button id in the HTML
+            const btn = document.getElementById('btn-voice');
+
+            if (btn) {
+                if (voiceActive) {
+                    btn.classList.add('active');
+                    speak("Voice commands active.");
+                } else {
+                    btn.classList.remove('active');
+                    speak("Voice commands stopped.");
+                }
+            }
+
+            if (recognition) {
+                if (voiceActive) {
+                    isProcessingCommand = false; // Reset flag when starting
+                    recognition.start();
+                } else {
+                    recognition.stop();
+                }
+            }
+        }
+
+        function handleCommand(cmd) {
+            // Prevent processing if already handling a command
+            if (isProcessingCommand) {
+                addResult("⏳ Please wait for the current command to finish.", false);
+                return;
+            }
+
+            if (cmd.includes('describe') || cmd.includes('see')) describeScene();
+            else if (cmd.includes('read') || cmd.includes('text')) readText();
+            else if (cmd.includes('people') || cmd.includes('person')) detectObjects();
+            else if (cmd.includes('stop')) toggleVoice();
+            else {
+                // Unknown command - restart listening
+                restartListening();
+            }
+        }
+
+        function restartListening() {
+            // Restart recognition after command completes
+            if (voiceActive && !isProcessingCommand) {
+                setTimeout(() => {
+                    if (voiceActive && !isProcessingCommand && recognition) {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            // Ignore errors if already started
+                        }
+                    }
+                }, 1000); // Wait 1 second before restarting
+            }
+        }
+
+        // Core Functions
+        async function describeScene() {
+            if (isProcessingCommand) return;
+            isProcessingCommand = true;
+            showLoader(true);
+            const img = captureImage();
+            try {
+                const res = await apiCall('/api/describe_scene', { image: img });
+                if (res.success) {
+                    addResult(res.data.result);
+                    speak(res.data.result);
+                } else {
+                    throw new Error(res.message);
+                }
+            } catch (e) {
+                addResult("Error: " + e.message, true);
+                speak("Sorry, I couldn't analyze the scene.");
+            }
+            showLoader(false);
+            isProcessingCommand = false;
+            restartListening();
+        }
+
+        async function readText() {
+            if (isProcessingCommand) return;
+            isProcessingCommand = true;
+            addResult("Reading text... (this can take 30-90s on CPU)", false);
+            speak("Scanning for text...");
+            showLoader(true);
+            const img = captureImage();
+            if (!img) {
+                showLoader(false);
+                addResult("❌ Failed to capture image. Please make sure camera is ready.", true);
+                speak("Failed to capture image.");
+                isProcessingCommand = false;
+                restartListening();
+                return;
+            }
+
+            try {
+                const res = await apiCall('/api/read_text', { image: img });
+                showLoader(false);
+
+                if (res.success && res.data) {
+                    const resultText = res.data.result || res.data.processed_text || res.data.raw_text || "No text detected";
+                    addResult(resultText);
+                    speak(resultText);
+                } else {
+                    const errorMsg = res.message || res.error?.message || "Could not read text";
+                    // Filter out Tesseract error messages from user display
+                    const cleanMsg = errorMsg.toLowerCase().includes('tesseract')
+                        ? "OCR engine temporarily unavailable. Please try again."
+                        : errorMsg;
+                    addResult(`❌ ${cleanMsg}`, true);
+                    speak("I couldn't read any text from the image.");
+                }
+            } catch (e) {
+                showLoader(false);
+                console.error("Read text error:", e);
+                // Filter out Tesseract error messages
+                let errorMsg = e.message || "Unknown error";
+                if (errorMsg.toLowerCase().includes('tesseract')) {
+                    errorMsg = "OCR engine temporarily unavailable. Please try again.";
+                }
+                addResult("❌ Error reading text: " + errorMsg + " (open DevTools Console for details)", true);
+                speak("Sorry, something went wrong reading the text.");
+            }
+            isProcessingCommand = false;
+            restartListening();
+        }
+
+        async function detectObjects() {
+            if (isProcessingCommand) return;
+            isProcessingCommand = true;
+            showLoader(true);
+            const img = captureImage();
+            try {
+                const res = await apiCall('/api/detect_objects', { image: img });
+                if (res.success) {
+                    addResult(res.data.result);
+                    speak(res.data.result);
+                }
+            } catch (e) {
+                addResult("Detection failed", true);
+            }
+            showLoader(false);
+            isProcessingCommand = false;
+            restartListening();
+        }
+
+        // Helpers
+        function captureImage() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            // Direct draw: captured image will be exactly what you see
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.8);
+        }
+
+        async function apiCall(endpoint, data) {
+            try {
+                // Add a timeout so Edge doesn't look "stuck" forever
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 120000); // 120s
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                    signal: controller.signal
+                });
+                clearTimeout(timeout);
+
+                const text = await res.text();
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error("Non-JSON response from server:", text);
+                    return { success: false, message: "Server returned an invalid response", raw: text };
+                }
+            } catch (e) {
+                console.error("API Call error:", e);
+                const msg = (e && (e.name === 'AbortError')) ? "Request timed out (server is slow). Try again." : "Server connection failed";
+                return { success: false, message: msg };
+            }
+        }
+
+        function addResult(text, isError = false) {
+            const results = document.getElementById('results');
+
+            // Remove the placeholder if it's there
+            if (results.querySelector('.fa-robot') || results.textContent.includes('Ready to assist')) {
+                results.innerHTML = '';
+            }
+
+            const item = document.createElement('div');
+            item.className = 'result-item fade-in';
+            item.style.marginBottom = '1rem';
+            item.style.padding = '1.25rem';
+            item.style.background = 'rgba(255,255,255,0.03)';
+            item.style.borderRadius = 'var(--radius-md)';
+            item.style.borderLeft = isError ? '4px solid var(--error)' : '4px solid var(--primary)';
+
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            item.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">${time}</span>
+                    <i class="fa-solid fa-check-circle" style="color: var(--success); font-size: 0.8rem;"></i>
+                </div>
+                <div style="font-size: 1rem; line-height: 1.6;">${text}</div>
+            `;
+
+            results.insertBefore(item, results.firstChild);
+
+            // Limit shown results
+            if (results.children.length > 10) results.removeChild(results.lastChild);
+        }
+
+        function speak(text) {
+            if (!text) return;
+            if (!synth) {
+                // Speech synthesis not supported - fail silently but keep visual output working
+                return;
+            }
+            try {
+                if (synth.speaking) synth.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                synth.speak(utter);
+            } catch (e) {
+                console.error("Speech synthesis error:", e);
+            }
+        }
+
+        function showLoader(show) {
+            const loader = document.getElementById('loader');
+            if (loader) loader.classList.toggle('active', show);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '<div class="result-item" style="text-align: center; color: var(--text-muted); padding-top: 2rem;"><i class="fa-solid fa-robot" style="font-size: 2rem; margin-bottom: 1rem;"></i><br>Ready to assist.</div>';
+        }
+
+        // Modal Logic
+        function openFaceModal() { document.getElementById('faceModal').style.display = 'flex'; }
+        function closeFaceModal() { document.getElementById('faceModal').style.display = 'none'; }
+
+        async function registerFace() {
+            const nameInput = document.getElementById('faceName');
+            const name = nameInput.value;
+            if (!name) return alert("Please enter a name");
+
+            showLoader(true);
+            const img = captureImage();
+            const res = await apiCall('/api/register_face', { image: img, name: name });
+            showLoader(false);
+
+            if (res.success) {
+                closeFaceModal();
+                nameInput.value = '';
+                addResult(`✅ Face registered: ${name}`);
+                speak(`Registered face for ${name}`);
+            } else {
+                alert("Failed: " + res.message);
+            }
+        }
+
+
+
+        // Keyboard Accessibility
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            const key = e.key.toLowerCase();
+            switch (key) {
+                case 'd':
+                case 'o': describeScene(); break;
+                case 'r':
+                case 't': readText(); break;
+                case 'p': detectObjects(); break;
+                case 'v': toggleVoice(); break;
+                case ' ': e.preventDefault(); speakLastResult(); break;
+
+                case 'escape':
+                    closeFaceModal();
+                    break;
+            }
+        });
+
+        // App Control
+        function startApp() {
+            if (appStarted) return;
+            appStarted = true;
+
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                splash.classList.add('fade-out');
+            }
+
+            // Welcome message + automatically turn on voice commands
+            speak("Welcome to Vision Aid. System is active. You can say describe, read, or people.");
+            // Auto-enable voice so a blind user can start speaking immediately
+            if (!voiceActive) {
+                toggleVoice();
+            }
+        }
+
+        function speakLastResult() {
+            const lastResult = document.querySelector('.result-item div:last-child');
+            if (lastResult) speak(lastResult.textContent);
+        }
+
+        function toggleCamera() {
+            const video = document.getElementById('video');
+            if (video.paused) video.play();
+            else video.pause();
+        }
+
+        // Initialize Splash Screen + auto-start for blind users
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const hint = document.getElementById('touch-hint');
+                const loader = document.querySelector('.loader-spinner');
+                const splash = document.getElementById('splash-screen');
+
+                if (loader) loader.style.display = 'none';
+                if (splash.querySelector('h1')) splash.querySelector('h1').style.display = 'none';
+                if (splash.querySelector('p')) splash.querySelector('p').style.display = 'none';
+
+                if (hint) {
+                    hint.style.display = 'flex';
+                    if (splash) {
+                        splash.style.cursor = 'pointer';
+                        splash.onclick = startApp;
+                    }
+                }
+
+                // Tell the user the app is ready; if they can't tap, we'll auto-start shortly.
+                speak("Vision Aid Ready. Touch anywhere to start, or just wait a moment.");
+
+                // Fallback: after a short delay, automatically start the app and voice
+                // so a blind user doesn't need to find the screen or click.
+                setTimeout(() => {
+                    if (!appStarted) {
+                        startApp();
+                    }
+                }, 4000);
+            }, 1500);
+        });
+    </script>
+</body>
+
+</html>
