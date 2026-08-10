@@ -47,7 +47,7 @@ except Exception as e:
 try:
     from paddleocr import PaddleOCR
     PADDLEOCR_AVAILABLE = True
-    print("✅ PaddleOCR loaded successfully (available as fallback OCR)")
+    print("[OK] PaddleOCR loaded successfully (available as fallback OCR)")
 except ImportError:
     PADDLEOCR_AVAILABLE = False
     # Silent - PaddleOCR is optional fallback, EasyOCR is primary
@@ -240,7 +240,7 @@ def initialize_models():
                 logger.info("Initializing AdvancedDetector with TTA for >95% accuracy...")
                 from advanced_detection import AdvancedDetector
                 advanced_detector = AdvancedDetector(model)
-                logger.info("✅ AdvancedDetector initialized successfully - >95% accuracy mode enabled")
+                logger.info("[OK] AdvancedDetector initialized successfully - >95% accuracy mode enabled")
             except Exception as e:
                 logger.warning(f"Advanced detector init failed: {e}. Using standard detection.")
                 advanced_detector = None
@@ -1217,47 +1217,105 @@ def api_read_text():
         
         start_time = time.time()
         
-        # ===== FAST PATH: prioritize SPEED over maximum accuracy =====
-        # Single downscale + SINGLE EasyOCR pass (no heavy multi-pass + no Paddle ensemble)
+        # ===== ROBUST HIGH-ACCURACY OCR PIPELINE =====
         try:
-            # Downscale aggressively for speed
-            h, w = img.shape[:2]
-            max_dim = 800
-            if w > max_dim or h > max_dim:
-                scale = min(max_dim / w, max_dim / h)
-                img_fast = cv2.resize(
-                    img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA
-                )
-            else:
-                img_fast = img
-
-            # Ensure EasyOCR reader
             ocr_reader = get_reader() if EASYOCR_AVAILABLE else None
-
             text = ""
+            
             if ocr_reader is not None:
-                # SINGLE, simple preprocessing: RGB only (no multi-version ensemble)
-                processed_img = cv2.cvtColor(img_fast, cv2.COLOR_BGR2RGB)
+                parts = []
+                
+                # Pass 1: Speed & Detail Optimized RGB Pass (canvas_size=1024, mag_ratio=1.0)
+                # Scale input image to max 1280px for optimal balance of speed and detail
+                h, w = img.shape[:2]
+                max_dim = 1280
+                if w > max_dim or h > max_dim:
+                    scale = min(max_dim / w, max_dim / h)
+                    img_pass = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_CUBIC)
+                else:
+                    img_pass = img.copy()
+                    
+                processed_rgb = cv2.cvtColor(img_pass, cv2.COLOR_BGR2RGB)
                 try:
                     results = ocr_reader.readtext(
-                        processed_img,
+                        processed_rgb,
                         paragraph=False,
                         detail=1,
-                        width_ths=0.4,
-                        height_ths=0.4,
+                        width_ths=0.5,
+                        height_ths=0.5,
+                        canvas_size=1024,
+                        mag_ratio=1.0,
+                        prob_ths=0.15
                     )
-                    parts = []
                     for (bbox, t, prob) in results:
-                        if t and t.strip() and prob > 0.3:
+                        if t and t.strip() and prob >= 0.15:
                             parts.append(t.strip())
-                    text = " ".join(parts).strip()
                 except Exception as e:
-                    logger.debug(f"Fast EasyOCR path failed: {e}")
+                    logger.debug(f"Pass 1 EasyOCR failed: {e}")
+                
+                # Pass 2: If Pass 1 yielded no text, try CLAHE contrast enhancement
+                if not parts:
+                    try:
+                        gray = cv2.cvtColor(img_pass, cv2.COLOR_BGR2GRAY)
+                        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+                        enhanced_gray = clahe.apply(gray)
+                        enhanced_rgb = cv2.cvtColor(enhanced_gray, cv2.COLOR_GRAY2RGB)
+                        results_enh = ocr_reader.readtext(
+                            enhanced_rgb,
+                            paragraph=False,
+                            detail=1,
+                            width_ths=0.5,
+                            height_ths=0.5,
+                            canvas_size=1024,
+                            mag_ratio=1.0,
+                            prob_ths=0.15
+                        )
+                        for (bbox, t, prob) in results_enh:
+                            if t and t.strip() and prob >= 0.15:
+                                parts.append(t.strip())
+                    except Exception as e:
+                        logger.debug(f"Pass 2 CLAHE OCR failed: {e}")
+                        
+                # Pass 3: If still no text, try upscaled pass
+                if not parts:
+                    try:
+                        upscaled = cv2.resize(img_pass, (int(w * 1.4), int(h * 1.4)), interpolation=cv2.INTER_CUBIC)
+                        upscaled_rgb = cv2.cvtColor(upscaled, cv2.COLOR_BGR2RGB)
+                        results_up = ocr_reader.readtext(
+                            upscaled_rgb,
+                            paragraph=False,
+                            detail=1,
+                            width_ths=0.5,
+                            height_ths=0.5,
+                            canvas_size=1024,
+                            mag_ratio=1.0,
+                            prob_ths=0.15
+                        )
+                        for (bbox, t, prob) in results_up:
+                            if t and t.strip() and prob >= 0.15:
+                                parts.append(t.strip())
+                    except Exception as e:
+                        logger.debug(f"Pass 3 Upscaled OCR failed: {e}")
+
+                text = " ".join(parts).strip()
 
             ocr_time = time.time() - start_time
 
             if not text:
-                # Fast, simple "no text" response – avoids all heavy fallbacks
+                # Fallback to PaddleOCR if available
+                if PADDLEOCR_AVAILABLE:
+                    try:
+                        paddle_ocr = get_paddle_ocr()
+                        if paddle_ocr is not None:
+                            p_res = paddle_ocr.predict(img)
+                            if p_res and len(p_res) > 0 and 'rec_texts' in p_res[0]:
+                                p_texts = [t for t, conf in zip(p_res[0]['rec_texts'], p_res[0]['rec_scores']) if conf > 0.2]
+                                if p_texts:
+                                    text = " ".join(p_texts).strip()
+                    except Exception as p_e:
+                        logger.debug(f"PaddleOCR fallback failed: {p_e}")
+
+            if not text:
                 return standard_response(
                     success=True,
                     data={
@@ -1270,7 +1328,6 @@ def api_read_text():
                     message="No text detected",
                 )
 
-            # Fast path successful – return immediately
             response_text = f"I read the following text: {text}"
             return standard_response(
                 success=True,
@@ -1342,7 +1399,7 @@ def api_read_text():
                                     texts.append(text_content)
                             if texts:
                                 text = ' '.join(texts)
-                                logger.info(f"✅ PaddleOCR successfully read text: '{text}'")
+                                logger.info(f"[OK] PaddleOCR successfully read text: '{text}'")
                                 # Skip EasyOCR entirely - PaddleOCR worked!
                                 # Jump to response generation
                                 all_results = []  # Clear to skip EasyOCR processing
@@ -1987,7 +2044,7 @@ if __name__ == '__main__':
     print("="*60 + "\n")
     
     try:
-        app.run(debug=True, host='127.0.0.1', port=5000, threaded=True, use_reloader=False)
+        app.run(debug=False, host='0.0.0.0', port=5000, threaded=True, use_reloader=False)
     except OSError as e:
         if "Address already in use" in str(e) or "address is already in use" in str(e).lower():
             print("\n" + "="*60)

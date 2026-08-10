@@ -10,27 +10,27 @@ print("=" * 50)
 print("\n1. Checking EasyOCR...")
 try:
     import easyocr
-    print("   ✓ EasyOCR module found")
+    print("   [OK] EasyOCR module found")
     try:
         reader = easyocr.Reader(['en'], gpu=False)
-        print("   ✓ EasyOCR initialized successfully")
+        print("   [OK] EasyOCR initialized successfully")
     except Exception as e:
-        print(f"   ✗ EasyOCR failed to initialize: {e}")
+        print(f"   [X] EasyOCR failed to initialize: {e}")
 except ImportError:
-    print("   ✗ EasyOCR not installed")
+    print("   [X] EasyOCR not installed")
 
 # Check PaddleOCR
 print("\n2. Checking PaddleOCR...")
 try:
     from paddleocr import PaddleOCR
-    print("   ✓ PaddleOCR module found")
+    print("   [OK] PaddleOCR module found")
     try:
         ocr = PaddleOCR(use_angle_cls=True, lang='en', show_log=False)
-        print("   ✓ PaddleOCR initialized successfully")
+        print("   [OK] PaddleOCR initialized successfully")
     except Exception as e:
-        print(f"   ✗ PaddleOCR failed to initialize: {e}")
+        print(f"   [X] PaddleOCR failed to initialize: {e}")
 except ImportError:
-    print("   ✗ PaddleOCR not installed")
+    print("   [X] PaddleOCR not installed")
 
 print("\n" + "=" * 50)
 print("Recommendation:")

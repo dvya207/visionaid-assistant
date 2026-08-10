@@ -997,8 +997,6 @@ class AdvancedSceneAnalyzer:
         benches_chairs = [obj for obj in object_positions if obj['label'] in ['bench', 'chair', 'couch', 'sofa']]
         
         # DEBUG: Log what we detected
-        import logging
-        logger = logging.getLogger(__name__)
         logger.info(f"DEBUG: Found {len(people)} people, {len(object_positions)} total objects")
         logger.info(f"DEBUG: Objects detected: {[obj['label'] for obj in object_positions[:10]]}")
         print(f"DEBUG: Found {len(people)} people, {len(object_positions)} total objects")
