@@ -48,9 +48,6 @@ pip install paddlepaddle paddleocr
 ```bash
 python app_web.py
 ```
-Open your browser and navigate to:
-- **Web App**: [http://localhost:5000](http://localhost:5000)
-- **Health Check**: [http://localhost:5000/health](http://localhost:5000/health)
 
 ---
 
